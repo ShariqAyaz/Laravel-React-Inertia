@@ -39,6 +39,14 @@ Copyright (c) 2024 Shariq Ayaz
 git clone git@github.com:ShariqAyaz/Laravel-React-Inertia.git
 ```
 2. Install dependencies
+- Install Inertia Laravel package
+```
+composer require inertiajs/inertia-laravel
+```
+- Inertia Middleware
+```
+php artisan inertia:middleware
+```
 ```
 composer install
 npm install
