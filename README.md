@@ -34,9 +34,9 @@ Copyright (c) 2024 Shariq Ayaz
   - Search with filters (/search)
 
 ## Quick Start
-
-1. Clone the repository```
-git@github.com:ShariqAyaz/Laravel-React-Inertia.git
+1. **Fork the repository** to your own GitHub account, then clone it locally:
+```
+git clone git@github.com:ShariqAyaz/Laravel-React-Inertia.git
 ```
 2. Install dependencies
 ```
@@ -58,3 +58,95 @@ npm run dev
 - The build process is optimized with Vite for faster development and production builds.
 - The `resources/js/app.tsx` file is the entry point for the React application.
 - The `resources/js/Pages` directory contains the React pages.
+
+## Request Lifecycle & Page Resolution
+
+### Request Flow
+1. **Initial Request**: Browser makes request to Laravel route (e.g., `/about`)
+2. **Server Processing**: 
+   - Laravel routes (`routes/web.php`) handle the request
+   - Route returns `Inertia::render('PageName')`
+   - Server prepares initial page data
+
+2. **First Visit (Full Page Load)**
+   - Server returns complete HTML with app.blade.php
+   - Vite bundles JavaScript and React components
+   - createInertiaApp bootstraps the React application
+   - Page component loads and renders
+
+3. **Subsequent Navigation**
+   - Inertia intercepts client-side navigation
+   - XHR request made to server
+   - Server returns JSON response
+   - React updates only necessary components
+
+### Page Resolution Architecture
+```typescript
+// How resolvePageComponent works with routes
+createInertiaApp({
+  resolve: (name) => resolvePageComponent(
+    `./Pages/${name}.tsx`,
+    import.meta.glob('./Pages/**/*.tsx')
+  ),
+  // ...
+})
+```
+
+- **Dynamic Import Mapping**:
+  - `name` parameter matches route response (e.g., 'About' → './Pages/About.tsx')
+  - `import.meta.glob` creates a module map during build time
+  - Components lazy-load only when needed
+
+- **Route-Component Correlation**:
+  ```php
+  // routes/web.php → resources/js/Pages
+  Route::get('/about', fn() => Inertia::render('About'))
+  // Maps to: resources/js/Pages/About.tsx
+  ```
+
+This architecture enables:
+- Automatic code splitting
+- On-demand component loading
+- Seamless SPA-like navigation
+- Server-side route handling with client-side rendering
+
+## Component Resolution Approaches
+
+### 1. Dynamic Module Resolution (Default)
+```typescript
+resolve: (name) => resolvePageComponent(
+    `./Pages/${name}.tsx`,
+    import.meta.glob<any>('./Pages/**/*.tsx')
+)
+```
+Benefits:
+- Automatic code splitting
+- Dynamic imports for better performance
+- No manual page registration needed
+- Scales well with many pages
+
+### 2. Direct Resolution (Explicit)
+```typescript
+const pages = {
+    'Welcome': Welcome,
+    'About': About,
+    'Products/Show': ProductShow,
+    'Search': Search
+}
+
+resolve: (name) => {
+    const page = pages[name]
+    if (!page) throw new Error(`Page ${name} not found`)
+    return page
+}
+```
+Benefits:
+- More readable and explicit
+- Easier to debug
+- Clear dependency tree
+- Better IDE support and type checking
+- Immediate error detection for missing pages
+
+Choose approach based on your needs:
+- Use Dynamic for large apps with many pages
+- Use Direct for smaller apps where explicitness is valued over automation
